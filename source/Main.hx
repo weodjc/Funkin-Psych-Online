@@ -3,6 +3,7 @@ package;
 import online.GameClient;
 import states.MainMenuState;
 import externs.WinAPI;
+import externs.Win7Compat;
 import haxe.Exception;
 import flixel.graphics.FlxGraphic;
 
@@ -30,6 +31,9 @@ import haxe.io.Path;
 import sys.io.File;
 import sys.io.Process;
 
+@:bitmap("assets/preload/images/ui/shiroko_cursor.png")
+class ShirokoCursorGraphic extends openfl.display.BitmapData {}
+
 class Main extends Sprite
 {
 	var game = {
@@ -47,7 +51,7 @@ class Main extends Sprite
 	public static var PSYCH_ONLINE_VERSION(default, null):String = null;
 	public static final CLIENT_PROTOCOL:Float = 11;
 	public static final NETWORK_PROTOCOL:Float = 8;
-	public static final GIT_COMMIT:String = online.backend.Macros.getGitCommitHash();
+	public static final GIT_COMMIT:String = "no-git";
 	public static final LOW_STORAGE:Bool = online.backend.Macros.hasNoCapacity();
 	
 	/**
@@ -71,6 +75,7 @@ class Main extends Sprite
 
 	public static function main():Void
 	{
+		Win7Compat.touch();
 		// cpp.vm.Profiler.start("profiler.txt");
 		if (Path.normalize(Sys.getCwd()) != Path.normalize(lime.system.System.applicationDirectory)) {
 			Sys.setCwd(lime.system.System.applicationDirectory);
@@ -160,15 +165,19 @@ class Main extends Sprite
 		Controls.instance = new Controls();
 		ClientPrefs.loadDefaultKeys();
 		addChild(new FlxGame(game.width, game.height, game.initialState, #if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, game.skipSplash, game.startFullscreen));
+		#if desktop
+		FlxG.mouse.useSystemCursor = false;
+		FlxG.mouse.load(new ShirokoCursorGraphic(0, 0), 0.7, -1, -1);
+		FlxG.mouse.visible = true;
+		#end
 
-		#if !mobile
-		fpsVar = new FPS(10, 3, 0xFFFFFF);
-		addChild(fpsVar);
 		Lib.current.stage.align = "tl";
 		Lib.current.stage.scaleMode = StageScaleMode.NO_SCALE;
-		if(fpsVar != null) {
-			fpsVar.visible = ClientPrefs.data.showFPS;
-		}
+
+		#if !mobile
+		fpsVar = new FPS(10, 3, 0x63E0C0);
+		Lib.current.addChild(fpsVar);
+		fpsVar.visible = ClientPrefs.data.showFPS;
 		#end
 
 		#if linux
@@ -193,6 +202,9 @@ class Main extends Sprite
 
 		// shader coords fix
 		FlxG.signals.gameResized.add(function (w, h) {
+		     if (fpsVar != null)
+				fpsVar.positionFPS(10, 3, Math.min(w / FlxG.width, h / FlxG.height));
+
 		     if (FlxG.cameras != null) {
 			   for (cam in FlxG.cameras.list) {
 				@:privateAccess
